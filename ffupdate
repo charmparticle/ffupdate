@@ -1,0 +1,112 @@
+#!/bin/bash
+
+#####
+# ffupdate - run this command as root, and it updates your firefox
+# if it needs updating :-)
+#
+# firefox will install to a folder named "firefox" in destdir
+# you may change this, if you want firefox installed somewhere else.
+# You will probably want to add $destdir/firefox to your $PATH, so
+# you can launch firefox from the commandline
+##########
+destdir="/opt/mozilla"
+bits="$(uname -m)"
+if [[ "$bits" = "x86_64" ]]
+then
+  os="linux64"
+else
+  os="linux"
+fi
+lang="$(echo "$LANG" | sed -e 's/\..*$//' -e 's/_/-/')"
+cpu_platform="$(uname -m)"
+nightly=0
+ffurl=""
+##########
+
+showhelp()
+{
+  echo "Please run as root, unless you have the install path set
+to someplace editable by your user.
+
+To download the latest nighty, add --nightly
+"
+}
+
+versionsort()
+{
+  local sortedversions="$(echo -e "$1\n$2" | sort -V)"
+  latestversion="$(echo "$sortedversions" | tail -1)"
+}
+
+mkffurl()
+{
+  if [[ "$nightly" = 1 ]]
+  then
+    ffurl="$(curl --compressed -sL "http://nightly.mozilla.org/" \
+      | grep -i "$os" \
+      | grep -i "$cpu_platform" \
+      | grep -o "http[^<> ]*bz2"\
+      | head -1)"
+  else
+    ffurl="$(curl --compressed -sL "http://www.mozilla.org/en-US/firefox/all/" \
+      | grep -i "$os" \
+      | grep -i "$lang" \
+      | grep -o "http[^<> ]*$lang" \
+      | sed "s/\&amp;/\&/g" \
+      | head -1)"
+  fi
+}
+
+getffversion()
+{
+  if [[ "$ffurl" = "" ]]
+  then
+    echo "mkffurl failed. This probably means that the firefox download website has changed somehow."
+    exit 1
+  fi
+  ffversion="$(echo $ffurl | grep -o 'firefox-[0-9.]*[a-z0-9]*' | sed 's/firefox-//')"
+  local localfirefox="$destdir"/firefox/firefox
+  if [[ -e "$localfirefox" ]]
+  then
+    sysffversion="$("$localfirefox" --version 2>/dev/null | cut -d ' ' -f 3)"
+  else
+    # if firefox hasn't been installed yet,
+    # set the system firefox version to zero.
+    sysffversion=0
+  fi
+}
+
+updateff(){
+  echo "checking for updates..."
+  versionsort "$sysffversion" "$ffversion"
+  if [[ "$sysffversion" != "$latestversion" ]]
+  then
+    if [[ "$(id -u)" = "0" ]]
+    then
+      [ -d "$destdir" ] || mkdir -p "$destdir"
+      echo "updating firefox to version $latestversion ..."
+      rm -rf "$destdir"/firefox
+      (curl --progress-bar -L "$ffurl") \
+	| (cd "$destdir" && tar xjpf -) \
+	&& echo "firefox updated!" || echo "there was a problem :-("
+    else
+      echo "There is an update available: $latestversion"
+      echo "Please rerun this command as root to update firefox."
+    fi
+  else
+    echo "No updates needed."
+  fi
+}
+
+case $1 in
+  --nightly)
+    nightly=1
+    ;;
+  -h|--help)
+    showhelp
+    ;;
+esac
+
+mkffurl
+getffversion
+updateff
