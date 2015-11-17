@@ -9,7 +9,6 @@
 # You will probably want to add $destdir/firefox to your $PATH, so
 # you can launch firefox from the commandline
 ##########
-destdir="/opt/mozilla"
 bits="$(uname -m)"
 if [[ "$bits" = "x86_64" ]]
 then
@@ -18,9 +17,7 @@ else
   os="linux"
 fi
 lang="$(echo "$LANG" | sed -e 's/\..*$//' -e 's/_/-/')"
-cpu_platform="$(uname -m)"
 nightly=0
-ffurl=""
 ##########
 
 showhelp()
@@ -42,12 +39,14 @@ mkffurl()
 {
   if [[ "$nightly" = 1 ]]
   then
+    destdir="/opt/mozilla/nightly"
     ffurl="$(curl --compressed -sL "http://nightly.mozilla.org/" \
       | grep -i "$os" \
-      | grep -i "$cpu_platform" \
+      | grep -i "$bits" \
       | grep -o "http[^<> ]*bz2"\
       | head -1)"
   else
+    destdir="/opt/mozilla"
     ffurl="$(curl --compressed -sL "http://www.mozilla.org/en-US/firefox/all/" \
       | grep -i "$os" \
       | grep -i "$lang" \
