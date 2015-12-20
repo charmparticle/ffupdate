@@ -7,103 +7,157 @@
 # firefox will install to a folder named "firefox" in destdir
 # you may change this, if you want firefox installed somewhere else.
 # You will probably want to add $destdir/firefox to your $PATH, so
-# you can launch firefox from the commandline
+# you can launch firefox from the commandline. I prefer $destdir to
+# be /opt/mozilla, but I leave that decision to you.
 ##########
-bits="$(uname -m)"
-if [[ "$bits" = "x86_64" ]]
-then
-  os="linux64"
-else
-  os="linux"
-fi
-lang="$(echo "$LANG" | sed -e 's/\..*$//' -e 's/_/-/')"
+ffdir="$HOME/ffupdate/mozilla" #~ will create a folder literally named ~
 nightly=0
+developer=0
 ##########
 
 showhelp()
 {
-  echo "Please run as root, unless you have the install path set
-to someplace editable by your user.
-
-To download the latest nighty, add --nightly
-"
+	echo "
+	To download the latest nighty, add --nightly
+	To download the latest aurora build of firefox, add --developer
+	"
 }
 
 versionsort()
 {
-  local sortedversions="$(echo -e "$1\n$2" | sort -V)"
-  latestversion="$(echo "$sortedversions" | tail -1)"
+	local sortedversions="$(echo -e "$1\n$2" | sort -V)"
+	latestversion="$(echo "$sortedversions" | tail -1)"
 }
 
 mkffurl()
 {
-  if [[ "$nightly" = 1 ]]
-  then
-    destdir="/opt/mozilla/nightly"
-    ffurl="$(curl --compressed -sL "http://nightly.mozilla.org/" \
-      | grep -i "$os" \
-      | grep -i "$bits" \
-      | grep -o "http[^<> ]*bz2"\
-      | head -1)"
-  else
-    destdir="/opt/mozilla"
-    ffurl="$(curl --compressed -sL "http://www.mozilla.org/en-US/firefox/all/" \
-      | grep -i "$os" \
-      | grep -i "$lang" \
-      | grep -o "http[^<> ]*$lang" \
-      | sed "s/\&amp;/\&/g" \
-      | head -1)"
-  fi
+	bits="$(uname -m)"
+	[[ "$bits" == "x86_64" ]] && [[ "$nightly" == 0 ]] && os="linux64" || os="linux"
+	lang="$(echo "$LANG" | sed -e 's/\..*$//' -e 's/_/-/')"
+	if [[ "$nightly" == 1 ]]
+	then
+		destdir="$ffdir/nightly"
+		ffurl="$(curl --compressed -sL "http://nightly.mozilla.org/" \
+			| grep -i "$os" \
+			| grep -i "$bits" \
+			| grep -o "http[^<> ]*bz2"\
+			| head -1)"
+	elif [[ "$developer" == 1 ]]
+	then
+		destdir="$ffdir/aurora"
+		ffurl="$(curl --compressed -sL "http://www.mozilla.org/en-US/firefox/developer/all/" \
+			| grep -i "$os" \
+			| grep -i "$lang" \
+			| grep -o "http[^<> ]*$lang" \
+			| sed "s/\&amp;/\&/g" \
+			| head -1)"
+	else
+		destdir="$ffdir"
+		ffurl="$(curl --compressed -sL "http://www.mozilla.org/en-US/firefox/all/" \
+			| grep -i "$os" \
+			| grep -i "$lang" \
+			| grep -o "http[^<> ]*$lang" \
+			| sed "s/\&amp;/\&/g" \
+			| head -1)"
+	fi
 }
 
 getffversion()
 {
-  if [[ "$ffurl" = "" ]]
-  then
-    echo "mkffurl failed. This probably means that the firefox download website has changed somehow."
-    exit 1
-  fi
-  ffversion="$(echo $ffurl | grep -o 'firefox-[0-9.]*[a-z0-9]*' | sed 's/firefox-//')"
-  local localfirefox="$destdir"/firefox/firefox
-  if [[ -e "$localfirefox" ]]
-  then
-    sysffversion="$("$localfirefox" --version 2>/dev/null | cut -d ' ' -f 3)"
-  else
-    # if firefox hasn't been installed yet,
-    # set the system firefox version to zero.
-    sysffversion=0
-  fi
+	if [[ "$ffurl" == "" ]]
+	then
+		echo "mkffurl failed. This probably means that the firefox download website has changed somehow."
+		exit 1
+	fi
+	ffversion="$(echo $ffurl | grep -o 'firefox-[0-9.]*[a-z0-9]*' | sed 's/firefox-//')"
+	local localfirefox="$destdir"/firefox/firefox
+	if [[ -e "$localfirefox" ]]
+	then
+		sysffversion="$("$localfirefox" --version 2>/dev/null | cut -d ' ' -f 3)"
+	else
+		# if firefox hasn't been installed yet,
+		# set the system firefox version to zero.
+		sysffversion=0
+	fi
+}
+
+ckdirperms(){
+	local dir=$1
+	if [[ "$(id -u)" == "$(stat -c '%u' "$dir")" ]]
+	then
+		if [[ "$(stat -c "%a" "$dir")" -ge 700 ]]
+		then
+			return 0
+		fi
+	fi
+	return 1
+}
+
+mkdestdir(){
+	local dir=$1
+	local parentdir=$(dirname "$dir")
+	if [[ -d "$parentdir" ]]
+	then
+		if ckdirperms "$parentdir"
+		then
+			if [[ -d "$dir" ]]
+			then
+				if ckdirperms "$dir"
+				then
+					return 0
+				else
+					echo "You don't have permission to write to $dir"
+				fi
+			else
+				mkdir -p "$dir"
+				return 0
+			fi
+		else
+			echo "You don't have permission to write to $parentdir"
+		fi
+	else
+		if mkdestdir "$parentdir"
+		then
+			mkdir -p "$dir"
+			return 0
+		else
+			echo "Could not create $parentdir"
+		fi
+	fi
+	return 1
 }
 
 updateff(){
-  echo "checking for updates..."
-  versionsort "$sysffversion" "$ffversion"
-  if [[ "$sysffversion" != "$latestversion" ]]
-  then
-    if [[ "$(id -u)" = "0" ]]
-    then
-      [ -d "$destdir" ] || mkdir -p "$destdir"
-      echo "updating firefox to version $latestversion ..."
-      rm -rf "$destdir"/firefox
-      (curl --progress-bar -L "$ffurl") \
-	| (cd "$destdir" && tar xjpf -) \
-	&& echo "firefox updated!" || echo "there was a problem :-("
-    else
-      echo "There is an update available: $latestversion"
-      echo "Please rerun this command as root to update firefox."
-    fi
-  else
-    echo "No updates needed."
-  fi
+	echo "checking for updates..."
+	versionsort "$sysffversion" "$ffversion"
+	if [[ "$sysffversion" != "$latestversion" ]]
+	then
+		if mkdestdir "$destdir"
+		then
+			echo "updating firefox to version $latestversion ..."
+			rm -rf "$destdir"/firefox
+			(curl --progress-bar -L "$ffurl") \
+				| (cd "$destdir" && tar xjpf -) \
+				&& echo "firefox updated!" || echo "there was a problem :-("
+		else
+			echo "There is an update available: $latestversion"
+			echo "Please rerun this command as root to update firefox."
+		fi
+	else
+		echo "No updates needed."
+	fi
 }
 
 case $1 in
-  --nightly)
-    nightly=1
-    ;;
-  -h|--help)
-    showhelp
-    ;;
+	--nightly)
+		nightly=1
+		;;
+	--developer)
+		developer=1
+		;;
+	-h|--help)
+		showhelp
+		;;
 esac
 
 mkffurl
