@@ -6,4 +6,4 @@ Firefox will exist in $dir/firefox/firefox, where dir is ~/ffupdate/mozilla or w
 
 ffupdate checks if it has permissions to create the folder structure and asks to run as root if it doesn't.
 
-It can install firefox, aurora (the developer addition, or nightly. If an unbranded edition comes out, I'll add that to the script. aurora or nightly get installed in $dir/aurora or $dir/nightly.
+It can install firefox, aurora (the developer addition), or nightly. If an unbranded edition comes out, I'll add that to the script. aurora or nightly get installed in $dir/aurora or $dir/nightly.
