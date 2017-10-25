@@ -1,16 +1,14 @@
 #!/bin/bash
-
 #####
-# ffupdate - run this command as root, and it updates your firefox
-# if it needs updating :-)
+# ffupdate - a simple way to update vanilla firefox in linux
 #
-# firefox will install to a folder named "firefox" in destdir
+# firefox will install to a folder named "firefox" in ffdir
 # you may change this, if you want firefox installed somewhere else.
-# You will probably want to add $destdir/firefox to your $PATH, so
-# you can launch firefox from the commandline. I prefer $destdir to
+# You will probably want to add $ffdir/firefox to your $PATH, so
+# you can launch firefox from the commandline. I prefer $ffdir to
 # be /opt/mozilla, but I leave that decision to you.
 ##########
-ffdir="$HOME/ffupdate/mozilla" #~ will create a folder literally named ~
+ffdir="$HOME/.local/ffupdate/mozilla"
 nightly=0
 developer=0
 ##########
@@ -29,7 +27,7 @@ versionsort()
 	latestversion="$(echo "$sortedversions" | tail -1)"
 }
 
-mkffurl()
+getffurl()
 {
 	bits="$(uname -m)"
 	[[ "$bits" == "x86_64" ]] && [[ "$nightly" == 0 ]] && os="linux64" || os="linux"
@@ -66,7 +64,7 @@ getffversion()
 {
 	if [[ "$ffurl" == "" ]]
 	then
-		echo "mkffurl failed. This probably means that the firefox download website has changed somehow."
+		echo "getffurl failed. This probably means that the firefox download website has changed somehow."
 		exit 1
 	fi
 	ffversion="$(echo $ffurl | grep -o 'firefox-[0-9.]*[a-z0-9]*' | sed 's/firefox-//')"
@@ -144,6 +142,7 @@ updateff(){
 			echo "Please rerun this command as root to update firefox."
 		fi
 	else
+	  #echo "$sysffversion == $ffversion"
 		echo "No updates needed."
 	fi
 }
@@ -160,6 +159,6 @@ case $1 in
 		;;
 esac
 
-mkffurl
+getffurl
 getffversion
 updateff
