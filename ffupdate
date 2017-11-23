@@ -1,6 +1,6 @@
 #!/bin/bash
 #####
-# ffupdate - a simple way to update firefox in linux
+# ffupdate - a simple way to update vanilla firefox in linux
 #
 # firefox will install to a folder named "firefox" in ffdir
 # you may change this, if you want firefox installed somewhere else.
@@ -46,19 +46,19 @@ getffurl()
 	bits="$(uname -m)"
 	[[ "$bits" == "x86_64" ]] && os="linux64" || os="linux"
 	lang="$(echo "$LANG" | sed -e 's/\..*$//' -e 's/_/-/')"
-	if [[ "$1" == "nightly" ]]
+	if [[ "$edition" == "nightly" ]]
 	then
 		destdir="$ffdir/nightly"
 		ffurl="https://download.mozilla.org/?product=firefox-nightly-latest-ssl&os=$os&lang=$lang"
-	elif [[ $1 == "beta" ]]
+	elif [[ "$edition" == "beta" ]]
 	then
 		destdir="$ffdir/beta"
 		ffurl="https://download.mozilla.org/?product=firefox-beta-latest-ssl&os=$os&lang=$lang"
-	elif [[ $1 == "developer" ]]
+	elif [[ "$edition" == "developer" ]]
 	then
 		destdir="$ffdir/devedition"
 		ffurl="https://download.mozilla.org/?product=firefox-devedition-latest-ssl&os=$os&lang=$lang"
-	elif [[ $1 == "vanilla" ]]
+	elif [[ "$edition" == "vanilla" ]]
 	then
 		destdir="$ffdir"
 		ffurl="https://download.mozilla.org/?product=firefox-latest-ssl&os=$os&lang=$lang"
@@ -67,11 +67,22 @@ getffurl()
 
 getffversion()
 {
-	ffversion=$(curl -s -L -I "$ffurl" | grep -o '/releases/[^/]*' | cut -d '/' -f 3)
+	if [[ "$edition" == "nightly" ]]
+	then
+		ffversion=$(curl -s -L -I "$ffurl" \
+			| grep Location \
+			| cut -d '/' -f 8 \
+			| cut -d '.' -f 1-2 \
+			| sed 's/firefox-//')
+	else
+		ffversion=$(curl -s -L -I "$ffurl" \
+			| grep -o '/releases/[^/]*' \
+			| cut -d '/' -f 3)
+	fi
 	local localfirefox="$destdir"/firefox/firefox
 	if [[ -e "$localfirefox" ]]
 	then
-		sysffversion="$("$localfirefox" --version 2>/dev/null | cut -d ' ' -f 3)"
+		sysffversion="$(cat "$destdir"/version.txt)"
 	else
 		# if firefox hasn't been installed yet,
 		# set the system firefox version to zero.
@@ -126,7 +137,6 @@ mkdestdir(){
 }
 
 updateff(){
-	edition=$1
 	echo "checking for updates for $edition firefox ..."
 	versionsort "$sysffversion" "$ffversion"
 	if [[ "$sysffversion" != "$latestversion" ]]
@@ -138,21 +148,21 @@ updateff(){
 			(curl --progress-bar -L "$ffurl") \
 				| (cd "$destdir" && tar xjpf -) \
 				&& echo "firefox updated!" || echo "there was a problem :-("
+			echo "$ffversion" > "$destdir"/version.txt
 		else
 			echo "  There is an update available: $latestversion"
 			echo "  Please rerun this command as root to update firefox."
 		fi
 	else
-		#echo "$sysffversion == $ffversion"
 		echo "  No updates needed"
 	fi
 }
 
 ffupdate(){
-	local edition=$1
-	getffurl "$edition"
-	getffversion
-	updateff "$edition"
+	edition=$1
+	getffurl
+	getffversion 
+	updateff
 }
 
 while getopts ":ndbva" opt; do
@@ -185,3 +195,5 @@ if [[ $# -eq 0 ]]
 then
 	showhelp
 fi
+
+
