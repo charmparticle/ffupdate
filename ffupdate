@@ -145,10 +145,13 @@ updateff(){
 		then
 			echo "updating $edition firefox to version $latestversion ..."
 			rm -rf "$destdir"/firefox
-			(curl --progress-bar -L "$ffurl") \
-				| (cd "$destdir" && tar xjpf -) \
-				&& echo "firefox updated!" || echo "there was a problem :-("
-			echo "$ffversion" > "$destdir"/version.txt
+			if (curl --progress-bar -L "$ffurl") | (cd "$destdir" && tar xjpf -)
+			then
+				echo "firefox updated!"
+				echo "$ffversion" > "$destdir"/version.txt
+			else
+				echo "there was a problem :-("
+			fi
 		else
 			echo "  There is an update available: $latestversion"
 			echo "  Please rerun this command as root to update firefox."
