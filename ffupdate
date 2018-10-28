@@ -8,7 +8,7 @@
 # you can launch firefox from the commandline. I prefer $ffdir to
 # be /opt/mozilla, but I leave that decision to you.
 ##########
-ffdir="$HOME/.local/ffupdate/mozilla"
+ffdir="/opt/mozilla"
 ##########
 
 showhelp()
@@ -60,7 +60,7 @@ getffurl()
 		ffurl="https://download.mozilla.org/?product=firefox-devedition-latest-ssl&os=$os&lang=$lang"
 	elif [[ "$edition" == "vanilla" ]]
 	then
-		destdir="$ffdir"
+		destdir="$ffdir/vanilla"
 		ffurl="https://download.mozilla.org/?product=firefox-latest-ssl&os=$os&lang=$lang"
 	fi
 }
