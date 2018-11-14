@@ -13,7 +13,7 @@ ffdir="/opt/mozilla"
 
 showhelp()
 {
-	echo "
+  echo "
 To download the latest vanilla firefox:
   $0 -v
 
@@ -37,166 +37,166 @@ Mix and match:
 
 versionsort()
 {
-	local sortedversions="$(echo -e "$1\n$2" | sort -V)"
-	latestversion="$(echo "$sortedversions" | tail -1)"
+  local sortedversions="$(echo -e "$1\n$2" | sort -V)"
+  latestversion="$(echo "$sortedversions" | tail -1)"
 }
 
 getffurl()
 {
-	bits="$(uname -m)"
-	[[ "$bits" == "x86_64" ]] && os="linux64" || os="linux"
-	lang="$(echo "$LANG" | sed -e 's/\..*$//' -e 's/_/-/')"
-	if [[ "$edition" == "nightly" ]]
-	then
-		destdir="$ffdir/nightly"
-		ffurl="https://download.mozilla.org/?product=firefox-nightly-latest-ssl&os=$os&lang=$lang"
-	elif [[ "$edition" == "beta" ]]
-	then
-		destdir="$ffdir/beta"
-		ffurl="https://download.mozilla.org/?product=firefox-beta-latest-ssl&os=$os&lang=$lang"
-	elif [[ "$edition" == "developer" ]]
-	then
-		destdir="$ffdir/devedition"
-		ffurl="https://download.mozilla.org/?product=firefox-devedition-latest-ssl&os=$os&lang=$lang"
-	elif [[ "$edition" == "vanilla" ]]
-	then
-		destdir="$ffdir/vanilla"
-		ffurl="https://download.mozilla.org/?product=firefox-latest-ssl&os=$os&lang=$lang"
-	fi
+  bits="$(uname -m)"
+  [[ "$bits" == "x86_64" ]] && os="linux64" || os="linux"
+  lang="$(echo "$LANG" | sed -e 's/\..*$//' -e 's/_/-/')"
+  if [[ "$edition" == "nightly" ]]
+  then
+    destdir="$ffdir/nightly"
+    ffurl="https://download.mozilla.org/?product=firefox-nightly-latest-ssl&os=$os&lang=$lang"
+  elif [[ "$edition" == "beta" ]]
+  then
+    destdir="$ffdir/beta"
+    ffurl="https://download.mozilla.org/?product=firefox-beta-latest-ssl&os=$os&lang=$lang"
+  elif [[ "$edition" == "developer" ]]
+  then
+    destdir="$ffdir/devedition"
+    ffurl="https://download.mozilla.org/?product=firefox-devedition-latest-ssl&os=$os&lang=$lang"
+  elif [[ "$edition" == "vanilla" ]]
+  then
+    destdir="$ffdir/vanilla"
+    ffurl="https://download.mozilla.org/?product=firefox-latest-ssl&os=$os&lang=$lang"
+  fi
 }
 
 getffversion()
 {
-	if [[ "$edition" == "nightly" ]]
-	then
-		ffversion=$(curl -s -L -I "$ffurl" \
-			| grep Location \
-			| cut -d '/' -f 8 \
-			| cut -d '.' -f 1-2 \
-			| sed 's/firefox-//')
-	else
-		ffversion=$(curl -s -L -I "$ffurl" \
-			| grep -o '/releases/[^/]*' \
-			| cut -d '/' -f 3)
-	fi
-	local localfirefox="$destdir"/firefox/firefox
-	if [[ -e "$localfirefox" ]]
-	then
-		sysffversion="$(cat "$destdir"/version.txt)"
-	else
-		# if firefox hasn't been installed yet,
-		# set the system firefox version to zero.
-		sysffversion=0
-	fi
+  if [[ "$edition" == "nightly" ]]
+  then
+    ffversion=$(curl -s -L -I "$ffurl" \
+      | grep Location \
+      | cut -d '/' -f 8 \
+      | cut -d '.' -f 1-2 \
+      | sed 's/firefox-//')
+  else
+    ffversion=$(curl -s -L -I "$ffurl" \
+      | grep -o '/releases/[^/]*' \
+      | cut -d '/' -f 3)
+  fi
+  local localfirefox="$destdir"/firefox/firefox
+  if [[ -e "$localfirefox" ]]
+  then
+    sysffversion="$(cat "$destdir"/version.txt)"
+  else
+    # if firefox hasn't been installed yet,
+    # set the system firefox version to zero.
+    sysffversion=0
+  fi
 }
 
 ckdirperms(){
-	local dir=$1
-	if [[ "$(id -u)" == "$(stat -c '%u' "$dir")" ]]
-	then
-		if [[ "$(stat -c "%a" "$dir")" -ge 700 ]]
-		then
-			return 0
-		fi
-	fi
-	return 1
+  local dir=$1
+  if [[ "$(id -u)" == "$(stat -c '%u' "$dir")" ]]
+  then
+    if [[ "$(stat -c "%a" "$dir")" -ge 700 ]]
+    then
+      return 0
+    fi
+  fi
+  return 1
 }
 
 mkdestdir(){
-	local dir=$1
-	local parentdir=$(dirname "$dir")
-	if [[ -d "$parentdir" ]]
-	then
-		if ckdirperms "$parentdir"
-		then
-			if [[ -d "$dir" ]]
-			then
-				if ckdirperms "$dir"
-				then
-					return 0
-				else
-					echo "  You don't have permission to write to $dir"
-				fi
-			else
-				mkdir -p "$dir"
-				return 0
-			fi
-		else
-			echo "  You don't have permission to write to $parentdir"
-		fi
-	else
-		if mkdestdir "$parentdir"
-		then
-			mkdir -p "$dir"
-			return 0
-		else
-			echo "Could not create $parentdir"
-		fi
-	fi
-	return 1
+  local dir=$1
+  local parentdir=$(dirname "$dir")
+  if [[ -d "$parentdir" ]]
+  then
+    if ckdirperms "$parentdir"
+    then
+      if [[ -d "$dir" ]]
+      then
+        if ckdirperms "$dir"
+        then
+          return 0
+        else
+          echo "  You don't have permission to write to $dir"
+        fi
+      else
+        mkdir -p "$dir"
+        return 0
+      fi
+    else
+      echo "  You don't have permission to write to $parentdir"
+    fi
+  else
+    if mkdestdir "$parentdir"
+    then
+      mkdir -p "$dir"
+      return 0
+    else
+      echo "Could not create $parentdir"
+    fi
+  fi
+  return 1
 }
 
 updateff(){
-	echo "checking for updates for $edition firefox ..."
-	versionsort "$sysffversion" "$ffversion"
-	if [[ "$sysffversion" != "$latestversion" ]]
-	then
-		if mkdestdir "$destdir"
-		then
-			echo "updating $edition firefox to version $latestversion ..."
-			rm -rf "$destdir"/firefox
-			if (curl --progress-bar -L "$ffurl") | (cd "$destdir" && tar xjpf -)
-			then
-				echo "firefox updated!"
-				echo "$ffversion" > "$destdir"/version.txt
-			else
-				echo "there was a problem :-("
-			fi
-		else
-			echo "  There is an update available: $latestversion"
-			echo "  Please rerun this command as root to update firefox."
-		fi
-	else
-		echo "  No updates needed"
-	fi
+  echo "checking for updates for $edition firefox ..."
+  versionsort "$sysffversion" "$ffversion"
+  if [[ "$sysffversion" != "$latestversion" ]]
+  then
+    if mkdestdir "$destdir"
+    then
+      echo "updating $edition firefox to version $latestversion ..."
+      rm -rf "$destdir"/firefox
+      if (curl --progress-bar -L "$ffurl") | (cd "$destdir" && tar xjpf -)
+      then
+        echo "firefox updated!"
+        echo "$ffversion" > "$destdir"/version.txt
+      else
+        echo "there was a problem :-("
+      fi
+    else
+      echo "  There is an update available: $latestversion"
+      echo "  Please rerun this command as root to update firefox."
+    fi
+  else
+    echo "  No updates needed"
+  fi
 }
 
 ffupdate(){
-	edition=$1
-	getffurl
-	getffversion 
-	updateff
+  edition=$1
+  getffurl
+  getffversion 
+  updateff
 }
 
 while getopts ":ndbva" opt; do
-	case $opt in
-		n)
-			ffupdate "nightly"
-			;;
-		d)
-			ffupdate "developer"
-			;;
-		b)
-			ffupdate "beta"
-			;;
-		v)
-			ffupdate "vanilla"
-			;;
-		a)
-			for edition in "vanilla" "nightly" "developer" "beta"; do
-			  ffupdate "$edition"
-			done
-			;;
-		*)
-			showhelp
-			exit 0
-			;;
-	esac
+  case $opt in
+    n)
+      ffupdate "nightly"
+      ;;
+    d)
+      ffupdate "developer"
+      ;;
+    b)
+      ffupdate "beta"
+      ;;
+    v)
+      ffupdate "vanilla"
+      ;;
+    a)
+      for edition in "vanilla" "nightly" "developer" "beta"; do
+        ffupdate "$edition"
+      done
+      ;;
+    *)
+      showhelp
+      exit 0
+      ;;
+  esac
 done
 
 if [[ $# -eq 0 ]]
 then
-	showhelp
+  showhelp
 fi
 
 
