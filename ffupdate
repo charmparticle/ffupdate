@@ -30,7 +30,7 @@ To download all four:
   $0 -a
 
 Mix and match:
-  $0 -vdn
+  $0 -vbnd
 
 "
 }
