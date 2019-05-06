@@ -7,5 +7,3 @@ Firefox will exist in $dir/mozilla/$flavor/firefox/firefox, where $dir is whatev
 ffupdate checks if it has permissions to create the folder structure and asks to run as root if it doesn't.
 
 It can install vanilla firefox, developer edition, nightly, or the latest beta.
-
-Note that devedition can disable extension signing, which can mitigate the problems, at least for linux users, with firefox's certificate expiration disaster on May 3rd, 2019.
