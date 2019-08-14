@@ -1,4 +1,5 @@
 # ffupdate
+![here's what ffupdate looks like](ffupdate.gif "ffupdate in the terminal")
 This is a shellscript for updating firefox on linux.
 It checks if firefox needs to be updated, and if it does, it updates firefox. It only looks for its own installation of firefox, so if you haven't run this script before, it will try to install firefox for you.
 
