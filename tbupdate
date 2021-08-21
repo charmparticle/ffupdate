@@ -1,0 +1,190 @@
+#!/bin/bash
+#####
+# tbupdate - a simple way to update vanilla thunderbird in linux
+#
+# thunderbird will install to a folder named "thunderbird" in tbdir
+# you may change this, if you want thunderbird installed somewhere else.
+# You will probably want to add $tbdir/thunderbird to your $PATH, so
+# you can launch thunderbird from the commandline. I prefer $tbdir to
+# be /opt/mozilla, but I leave that decision to you.
+##########
+tbdir="/opt/mozilla"
+##########
+
+showhelp()
+{
+  echo "
+To download the latest vanilla thunderbird:
+  $0 -v
+
+To download the latest beta:
+  $0 -b
+
+To download both:
+  $0 -a
+
+Mix and match:
+  $0 -vb
+
+"
+}
+
+versionsort()
+{
+  local sortedversions="$(echo -e "$1\n$2" | sort -V)"
+  latestversion="$(echo "$sortedversions" | tail -1)"
+}
+
+gettburl()
+{
+  bits="$(uname -m)"
+  [[ "$bits" == "x86_64" ]] && os="linux64" || os="linux"
+  lang="$(echo "$LANG" | sed -e 's/\..*$//' -e 's/_/-/')"
+  if [[ "$edition" == "nightly" ]]
+  then
+    destdir="$tbdir/nightly"
+    tburl="https://download.mozilla.org/?product=thunderbird-nightly-latest-ssl&os=$os&lang=$lang"
+  elif [[ "$edition" == "beta" ]]
+  then
+    destdir="$tbdir/beta"
+    tburl="https://download.mozilla.org/?product=thunderbird-beta-latest-ssl&os=$os&lang=$lang"
+  elif [[ "$edition" == "developer" ]]
+  then
+    destdir="$tbdir/devedition"
+    tburl="https://download.mozilla.org/?product=thunderbird-devedition-latest-ssl&os=$os&lang=$lang"
+  elif [[ "$edition" == "vanilla" ]]
+  then
+    destdir="$tbdir/vanilla"
+    tburl="https://download.mozilla.org/?product=thunderbird-latest-ssl&os=$os&lang=$lang"
+  fi
+}
+
+gettbversion()
+{
+  if [[ "$edition" == "nightly" ]]
+  then
+    tbversion=$(curl -s -L -I "$tburl" \
+      | grep Location \
+      | cut -d '/' -f 8 \
+      | cut -d '.' -f 1-2 \
+      | sed 's/thunderbird-//')
+  else
+    tbversion=$(curl -s -L -I "$tburl" \
+      | grep -o '/releases/[^/]*' \
+      | cut -d '/' -f 3)
+  fi
+  local localthunderbird="$destdir"/thunderbird/thunderbird
+  if [[ -e "$localthunderbird" ]]
+  then
+    systbversion="$(cat "$destdir"/version.txt)"
+  else
+    # if thunderbird hasn't been installed yet,
+    # set the system thunderbird version to zero.
+    systbversion=0
+  fi
+}
+
+ckdirperms(){
+  local dir=$1
+  if [[ "$(id -u)" == "$(stat -c '%u' "$dir")" ]]
+  then
+    if [[ "$(stat -c "%a" "$dir")" -ge 700 ]]
+    then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+mkdestdir(){
+  local dir=$1
+  local parentdir=$(dirname "$dir")
+  if [[ -d "$parentdir" ]]
+  then
+    if ckdirperms "$parentdir"
+    then
+      if [[ -d "$dir" ]]
+      then
+        if ckdirperms "$dir"
+        then
+          return 0
+        else
+          echo "  You don't have permission to write to $dir"
+        fi
+      else
+        mkdir -p "$dir"
+        return 0
+      fi
+    else
+      echo "  You don't have permission to write to $parentdir"
+    fi
+  else
+    if mkdestdir "$parentdir"
+    then
+      mkdir -p "$dir"
+      return 0
+    else
+      echo "Could not create $parentdir"
+    fi
+  fi
+  return 1
+}
+
+updatetb(){
+  echo "checking for updates for $edition thunderbird ..."
+  versionsort "$systbversion" "$tbversion"
+  if [[ "$systbversion" != "$latestversion" ]]
+  then
+    if mkdestdir "$destdir"
+    then
+      echo "updating $edition thunderbird to version $latestversion ..."
+      rm -rf "$destdir"/thunderbird
+      if (curl --progress-bar -L "$tburl") | (cd "$destdir" && tar xjpf -)
+      then
+        echo "thunderbird updated!"
+        echo "$tbversion" > "$destdir"/version.txt
+      else
+        echo "there was a problem :-("
+      fi
+    else
+      echo "  There is an update available: $latestversion"
+      echo "  Please rerun this command as root to update thunderbird."
+    fi
+  else
+    echo "  No updates needed"
+  fi
+}
+
+tbupdate(){
+  edition=$1
+  gettburl
+  gettbversion 
+  updatetb
+}
+
+while getopts ":ndbva" opt; do
+  case $opt in
+    b)
+      tbupdate "beta"
+      ;;
+    v)
+      tbupdate "vanilla"
+      ;;
+    a)
+      for edition in "vanilla" "beta"; do
+        tbupdate "$edition"
+      done
+      ;;
+    *)
+      showhelp
+      exit 0
+      ;;
+  esac
+done
+
+if [[ $# -eq 0 ]]
+then
+  showhelp
+fi
+
+

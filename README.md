@@ -9,3 +9,12 @@ Firefox will exist in $dir/mozilla/$flavor/firefox/firefox, where $dir is whatev
 ffupdate checks if it has permissions to create the folder structure and asks to run as root if it doesn't.
 
 It can install vanilla firefox, developer edition, nightly, or the latest beta.
+
+# tbupdate
+
+I have added a separate shellscript, tbupdate, for installing and updating thunderbird.
+
+It's nearly identical to ffupdate, so I figured I'd throw it in here.
+
+Thunderbird will install to $dir/mozilla/$flavor/thunderbird/thunderbird
+
