@@ -32,6 +32,7 @@ Mix and match:
 versionsort()
 {
   local sortedversions="$(echo -e "$1\n$2" | sort -V)"
+  #echo $sortedversions
   latestversion="$(echo "$sortedversions" | tail -1)"
 }
 
@@ -73,10 +74,11 @@ gettbversion()
       | grep -o '/releases/[^/]*' \
       | cut -d '/' -f 3)
   fi
+  #echo $tbversion
   local localthunderbird="$destdir"/thunderbird/thunderbird
   if [[ -e "$localthunderbird" ]]
   then
-    systbversion="$(cat "$destdir"/version.txt)"
+    systbversion="$(cat "$destdir"/tb_version.txt)"
   else
     # if thunderbird hasn't been installed yet,
     # set the system thunderbird version to zero.
@@ -142,7 +144,7 @@ updatetb(){
       if (curl --progress-bar -L "$tburl") | (cd "$destdir" && tar xjpf -)
       then
         echo "thunderbird updated!"
-        echo "$tbversion" > "$destdir"/version.txt
+        echo "$tbversion" > "$destdir"/tb_version.txt
       else
         echo "there was a problem :-("
       fi
