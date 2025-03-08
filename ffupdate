@@ -145,7 +145,7 @@ updateff(){
     then
       echo "updating $edition firefox to version $latestversion ..."
       rm -rf "$destdir"/firefox
-      if (curl --progress-bar -L "$ffurl") | (cd "$destdir" && tar xjpf -)
+      if (curl --progress-bar -L "$ffurl") | (cd "$destdir" && tar xJf -)
       then
         echo "firefox updated!"
         echo "$ffversion" > "$destdir"/version.txt
